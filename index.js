@@ -37,3 +37,14 @@ newspapers.forEach(newspaper => {
 app.get('/', (req, res) => {
     res.json('Welcome to my Tech Trends API')
 })
+
+app.get('/news', (req, res) => {
+    res.json(articles)
+})
+
+app.get('/new/:newspaperID', (req, res) => {
+    const newspaperID = req.params.newspaperID
+    
+    const newspaperAddress = newspapers.filter(newspaper => newspaper.name === newspaperID)[0].address
+    const newspaperBase = newspapers.filter(newspaper.name === newspaperID)[0].base
+})
