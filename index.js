@@ -11,6 +11,7 @@ const newspapers = [
         address: 'https://yellow.systems/blog/web-development-future-trends',
         base: ''
     }
+    //TODO: Add more newspapers to collect more data
 ]
 
 const articles = []
@@ -21,15 +22,17 @@ newspapers.forEach(newspaper => {
             const html = response.data
             const $ = cheerio.load(html)
 
-            $('a:contains("technology")', html).each(function () {
-                const title = $(this).text()
-                const url = $(this).attr('href')
-
-                articles.push({
-                    title,
-                    url: newspaper.base + url,
-                    source: newspaper.name
-                })
+            $('a', html).each(function () {
+                if ($(this).attr('href').startsWith("https")) {
+                    const title = $(this).text()
+                    const url = $(this).attr('href')
+    
+                    articles.push({
+                        title,
+                        url: newspaper.base + url,
+                        source: newspaper.name
+                    })
+                }
             })
         })
 })
@@ -42,9 +45,32 @@ app.get('/news', (req, res) => {
     res.json(articles)
 })
 
-app.get('/new/:newspaperID', (req, res) => {
+app.get('/news/:newspaperID', (req, res) => {
     const newspaperID = req.params.newspaperID
     
-    const newspaperAddress = newspapers.filter(newspaper => newspaper.name === newspaperID)[0].address
-    const newspaperBase = newspapers.filter(newspaper.name === newspaperID)[0].base
+    const newspaperAddress = newspapers.filter(newspaper => newspaper.name == newspaperID)[0].address
+    const newspaperBase = newspapers.filter(newspaper => newspaper.name == newspaperID)[0].base
+
+    axios.get(newspaperAddress)
+        .then(response => {
+            const html = response.data
+            const $ = cheerio.load(html)
+            const specificArticles = []
+
+            $('a', html).each(function () {
+                if ($(this).attr('href').startsWith("https")) {
+                    const title = $(this).text()
+                    const url = $(this).attr('href')
+    
+                    specificArticles.push({
+                        title,
+                        url: newspaperBase + url,
+                        source: newspaperID
+                    })
+                }
+            })
+            res.json(specificArticles)
+        }).catch(err => console.log(err))
 })
+
+app.listen(PORT, () => console.log(`server running on PORT ${PORT}`))
