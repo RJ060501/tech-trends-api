@@ -10,6 +10,11 @@ const newspapers = [
         name: 'yellowsystems',
         address: 'https://yellow.systems/blog/web-development-future-trends',
         base: ''
+    },
+    {
+        name: 'explodingtopics',
+        address: 'https://explodingtopics.com/blog/software-development-trends',
+        base: ''
     }
     //TODO: Add more newspapers to collect more data
 ]
