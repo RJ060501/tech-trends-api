@@ -5,80 +5,70 @@ const cheerio = require("cheerio");
 
 const app = express();
 
-// Define the keyword to filter articles by URL
-const keyword = ""; // Change this to your desired keyword
+// Serve static files from the public directory
+app.use(express.static('public'));
 
-const newspapers = [
-  {
-    name: "yellowsystems",
-    address: "https://yellow.systems/blog/web-development-future-trends",
-    base: "",
+// New route to handle dynamic scraping with pagination
+app.get("/scrape", (req, res) => {
+  const { website, keyword, page = 1, limit = 10 } = req.query;
+
+  if (!website || !keyword) {
+    return res.status(400).json({ message: "Website URL and keyword are required" });
   }
-  // Additional newspapers can be added here
-];
 
-const articles = [];
+  axios.get(website)
+    .then(async (response) => {
+      const html = response.data;
+      const $ = cheerio.load(html);
+      const links = [];
 
-newspapers.forEach((newspaper) => {
-  axios.get(newspaper.address).then((response) => {
-    const html = response.data;
-    const $ = cheerio.load(html);
+      $("a", html).each(function () {
+        const url = $(this).attr("href");
 
-    $("a", html).each(function () {
-      const url = $(this).attr("href");
+        // Collect valid article links
+        if (url && url.startsWith("http")) {
+          links.push({
+            title: $(this).text(),
+            url,
+            source: website,
+          });
+        }
+      });
 
-      // Only include articles where the URL contains the keyword
-      if (url && url.startsWith("https") && url.includes(keyword)) {
-        const title = $(this).text();
-        articles.push({
-          title,
-          url: newspaper.base + url,
-          source: newspaper.name,
-        });
-      }
-    });
-  }).catch((err) => console.log(err));
-});
+      // Calculate pagination
+      const start = (parseInt(page) - 1) * parseInt(limit);
+      const end = start + parseInt(limit);
+      const paginatedLinks = links.slice(start, end);
 
-app.get("/", (req, res) => {
-  res.json("Welcome to my Tech Trends API");
-});
+      // Now, visit each link and check the content for the keyword
+      const filteredArticles = [];
+      for (let link of paginatedLinks) {
+        try {
+          const articleResponse = await axios.get(link.url);
+          const articleHtml = articleResponse.data;
+          const $$ = cheerio.load(articleHtml);
 
-app.get("/news", (req, res) => {
-  res.json(articles);
-});
-
-app.get("/news/:newspaperID", (req, res) => {
-  const newspaperID = req.params.newspaperID;
-
-  const newspaper = newspapers.find(newspaper => newspaper.name === newspaperID);
-  if (newspaper) {
-    axios
-      .get(newspaper.address)
-      .then((response) => {
-        const html = response.data;
-        const $ = cheerio.load(html);
-        const specificArticles = [];
-
-        $("a", html).each(function () {
-          const url = $(this).attr("href");
-
-          // Only include articles where the URL contains the keyword
-          if (url && url.startsWith("https") && url.includes(keyword)) {
-            const title = $(this).text();
-            specificArticles.push({
-              title,
-              url: newspaper.base + url,
-              source: newspaperID,
-            });
+          // Search for the keyword in the article's content
+          const articleText = $$('body').text().toLowerCase(); // Get all text within the body
+          if (articleText.includes(keyword.toLowerCase())) {
+            filteredArticles.push(link);
           }
-        });
-        res.json(specificArticles);
-      })
-      .catch((err) => console.log(err));
-  } else {
-    res.status(404).json({ message: "Newspaper not found" });
-  }
+        } catch (err) {
+          console.error(`Error scraping the article at ${link.url}:`, err.message);
+        }
+      }
+
+      res.json({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: links.length,
+        articles: filteredArticles,
+      });
+    })
+    .catch((err) => {
+      console.error("Error scraping the website:", err.message); // Log the error
+      res.status(500).json({ message: "Error scraping the website", error: err.message });
+    });
 });
 
 app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));

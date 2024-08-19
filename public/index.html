@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Trends News</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Tech Trends News</h1>
+
+    <!-- Form for user input -->
+    <form id="scraperForm">
+      <input type="text" id="website" placeholder="Enter website URL" required>
+      <input type="text" id="keyword" placeholder="Enter keyword to filter articles" required>
+      <button type="submit">Fetch News</button>
+    </form>
+
+    <div id="articles"></div>
+    <div id="pagination"></div> <!-- Pagination controls -->
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
