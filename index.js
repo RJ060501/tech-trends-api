@@ -12,12 +12,18 @@ app.use(express.static('public'));
 app.get("/scrape", (req, res) => {
   const { website, keyword, page = 1, limit = 10 } = req.query;
 
+  console.log(`Scraping website: ${website}, keyword: ${keyword}, page: ${page}, limit: ${limit}`); // Log the incoming request
+
   if (!website || !keyword) {
     return res.status(400).json({ message: "Website URL and keyword are required" });
   }
 
+  console.log(`Scraping website: ${website}, keyword: ${keyword}, page: ${page}, limit: ${limit}`); // Log the incoming request
+
   axios.get(website)
     .then(async (response) => {
+      console.log("Website successfully fetched.");
+
       const html = response.data;
       const $ = cheerio.load(html);
       const links = [];
@@ -34,6 +40,8 @@ app.get("/scrape", (req, res) => {
           });
         }
       });
+
+      console.log("Collected links:", links);
 
       // Calculate pagination
       const start = (parseInt(page) - 1) * parseInt(limit);
