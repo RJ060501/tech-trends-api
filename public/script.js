@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('limit', limit);
 
       // Display articles
+      //FIX
       displayArticles(data);
     } catch (error) {
       console.error('Error fetching news:', error);
