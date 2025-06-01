@@ -18,7 +18,7 @@ app.get("/scrape", (req, res) => {
     return res.status(400).json({ message: "Website URL and keyword are required" });
   }
 
-  console.log(`Scraping website: ${website}, keyword: ${keyword}, page: ${page}, limit: ${limit}`); // Log the incoming request
+  // console.log(`Scraping website: ${website}, keyword: ${keyword}, page: ${page}, limit: ${limit}`); // Log the incoming request
 
   axios.get(website)
     .then(async (response) => {
