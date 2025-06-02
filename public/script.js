@@ -38,6 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(
         `/scrape?website=${encodeURIComponent(url)}&keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`
       );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        throw new Error(`Server error: ${response.status} ${response.statusText}. Response: ${text.slice(0, 100)}...`);
+      }
+
       const data = await response.json();
 
       // Store input values in localStorage
@@ -45,10 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("url", url);
       localStorage.setItem("page", page);
       localStorage.setItem("limit", limit);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch articles");
-      }
 
       displayArticles(data);
     } catch (error) {
@@ -59,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Function to display articles
   function displayArticles(data) {
-    const { articles = [], page, limit, total } = data;
+    const { articles = [], page, limit, total, failedLinks = 0 } = data;
     resultsDiv.innerHTML = "";
 
     if (articles.length > 0) {
@@ -74,9 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       // Add note if some articles failed to load
-      if (articles.length < Math.min(limit, total - (page - 1) * limit)) {
+      if (failedLinks > 0) {
         const noteDiv = document.createElement("div");
-        noteDiv.innerHTML = "<p>Note: Some articles could not be fetched due to errors.</p>";
+        noteDiv.innerHTML = `<p>Note: ${failedLinks} article(s) could not be fetched due to errors.</p>`;
         resultsDiv.appendChild(noteDiv);
       }
 
