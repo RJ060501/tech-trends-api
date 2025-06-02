@@ -1,17 +1,16 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // Get references to DOM elements
-  const form = document.getElementById('scrape-form');
-  const resultsDiv = document.getElementById('results');
-  const keywordInput = document.getElementById('keyword');
-  const urlInput = document.getElementById('url');
-  const pageInput = document.getElementById('page');
-  const limitInput = document.getElementById('limit');
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("scrape-form");
+  const resultsDiv = document.getElementById("results");
+  const keywordInput = document.getElementById("keyword");
+  const urlInput = document.getElementById("url");
+  const pageInput = document.getElementById("page");
+  const limitInput = document.getElementById("limit");
 
-  // Initialize inputs with existing values (in case the page was refreshed)
-  const savedKeyword = localStorage.getItem('keyword');
-  const savedUrl = localStorage.getItem('url');
-  const savedPage = localStorage.getItem('page') || 1;
-  const savedLimit = localStorage.getItem('limit') || 10;
+  // Initialize inputs with existing values
+  const savedKeyword = localStorage.getItem("keyword");
+  const savedUrl = localStorage.getItem("url");
+  const savedPage = localStorage.getItem("page") || 1;
+  const savedLimit = localStorage.getItem("limit") || 10;
 
   if (savedKeyword) keywordInput.value = savedKeyword;
   if (savedUrl) urlInput.value = savedUrl;
@@ -19,45 +18,54 @@ document.addEventListener('DOMContentLoaded', () => {
   limitInput.value = savedLimit;
 
   // Add event listener for form submission
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Prevent default form submission
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    // Get input values
     const url = urlInput.value.trim();
     const keyword = keywordInput.value.trim();
     const page = pageInput.value || 1;
     const limit = limitInput.value || 10;
 
+    // Validate URL
+    if (!url.match(/^https?:\/\/.+/)) {
+      resultsDiv.innerHTML = "<p>Please enter a valid URL starting with http:// or https://</p>";
+      return;
+    }
+
+    resultsDiv.innerHTML = "<p>Loading...</p>";
+
     try {
-      // Fetch the results from the server
-      const response = await fetch(`/scrape?website=${encodeURIComponent(url)}&keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`);
+      const response = await fetch(
+        `/scrape?website=${encodeURIComponent(url)}&keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`
+      );
       const data = await response.json();
 
-      // Store input values in localStorage to persist between refreshes
-      localStorage.setItem('keyword', keyword);
-      localStorage.setItem('url', url);
-      localStorage.setItem('page', page);
-      localStorage.setItem('limit', limit);
+      // Store input values in localStorage
+      localStorage.setItem("keyword", keyword);
+      localStorage.setItem("url", url);
+      localStorage.setItem("page", page);
+      localStorage.setItem("limit", limit);
 
-      // Display articles
-      //FIX
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch articles");
+      }
+
       displayArticles(data);
     } catch (error) {
-      console.error('Error fetching news:', error);
-      resultsDiv.innerHTML = '<p>Error fetching news. Please try again.</p>';
+      console.error("Error fetching news:", error);
+      resultsDiv.innerHTML = `<p>Error: ${error.message}. Please check the URL, try a different website, or try again later.</p>`;
     }
   });
 
   // Function to display articles
   function displayArticles(data) {
-    // Preserve input values in case of no articles or error
-    const { articles = [] } = data;
+    const { articles = [], page, limit, total } = data;
+    resultsDiv.innerHTML = "";
 
     if (articles.length > 0) {
-      resultsDiv.innerHTML = ''; // Clear previous results
-      articles.forEach(article => {
-        const articleDiv = document.createElement('div');
-        articleDiv.classList.add('article');
+      articles.forEach((article) => {
+        const articleDiv = document.createElement("div");
+        articleDiv.classList.add("article");
         articleDiv.innerHTML = `
           <h2><a href="${article.url}" target="_blank">${article.title}</a></h2>
           <p>Source: ${article.source}</p>
@@ -65,27 +73,34 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.appendChild(articleDiv);
       });
 
+      // Add note if some articles failed to load
+      if (articles.length < Math.min(limit, total - (page - 1) * limit)) {
+        const noteDiv = document.createElement("div");
+        noteDiv.innerHTML = "<p>Note: Some articles could not be fetched due to errors.</p>";
+        resultsDiv.appendChild(noteDiv);
+      }
+
       // Add pagination if applicable
-      if (data.total > articles.length) {
-        const paginationDiv = document.createElement('div');
-        paginationDiv.classList.add('pagination');
+      if (total > limit) {
+        const paginationDiv = document.createElement("div");
+        paginationDiv.classList.add("pagination");
         paginationDiv.innerHTML = `
-          <a href="#" onclick="changePage(${data.page - 1})">Previous</a>
-          <a href="#" onclick="changePage(${data.page + 1})">Next</a>
+          ${page > 1 ? `<a href="#" onclick="changePage(${page - 1})">Previous</a>` : ""}
+          <span>Page ${page} of ${Math.ceil(total / limit)}</span>
+          ${page * limit < total ? `<a href="#" onclick="changePage(${page + 1})">Next</a>` : ""}
         `;
         resultsDiv.appendChild(paginationDiv);
       }
     } else {
-      // Show "No results" message but retain inputs
-      resultsDiv.innerHTML = '<p>No articles found. Please try another keyword or URL.</p>';
+      resultsDiv.innerHTML = "<p>No articles found. Please try another keyword or URL.</p>";
     }
   }
 
-  // Function to change the page when pagination links are clicked
+  // Function to change the page
   window.changePage = (newPage) => {
-    if (newPage > 0) { // Ensure valid page number
+    if (newPage > 0) {
       pageInput.value = newPage;
-      form.dispatchEvent(new Event('submit')); // Trigger form submission
+      form.dispatchEvent(new Event("submit"));
     }
   };
 });
